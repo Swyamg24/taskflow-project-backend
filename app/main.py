@@ -8,10 +8,13 @@ from app.routers import auth, tasks
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title="Intern Project API",
+    title="Backend Project API",
     version="1.0.0",
 )
 
+origins = [
+    "https://taskflow-project-frontend-one.vercel.app",  # your frontend
+]
 # Read from env — set in Render dashboard
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
