@@ -14,44 +14,57 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# ✅ Read frontend URL from environment (Render)
-env_frontend = os.getenv("FRONTEND_URL")
+# ── CORS ORIGINS ──────────────────────────────────────────────────────────────
+# FIX: Added 127.0.0.1 variants — browsers sometimes send 127.0.0.1 instead of
+# localhost, which caused the origin check to fail and blocked all requests.
+# FIX: Support CORS_ORIGINS env var as a comma-separated list of extra URLs
+# so you can add any custom domain without hardcoding.
 
-# ✅ Define explicitly allowed origins to ensure it works in both dev and prod
-# We include your exact Vercel URL as a hardcoded failsafe just in case 
-# the Render environment variable isn't set up perfectly yet.
 origins = [
-    "https://taskflow-project-frontend-one.vercel.app",  # Production Failsafe
-    "http://localhost:3000",                             # Local React Failsafe
-    "http://localhost:5173",                             # Local Vite Failsafe
+    # Production
+    "https://taskflow-project-frontend-one.vercel.app",
+
+    # Local dev — both "localhost" and "127.0.0.1" variants are required
+    # because different browsers/OS may use either form as the Origin header.
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
-# If the env variable exists and isn't already in the list, add it.
-# (We strip any accidental trailing slashes to prevent CORS failures)
+# Single extra URL from env (backward-compatible with existing Render config)
+env_frontend = os.getenv("FRONTEND_URL")
 if env_frontend:
-    clean_env_url = env_frontend.rstrip("/")
-    if clean_env_url not in origins:
-        origins.append(clean_env_url)
+    clean = env_frontend.rstrip("/")
+    if clean not in origins:
+        origins.append(clean)
 
-# ✅ CORS configuration
+# NEW: comma-separated list of extra origins, e.g. for staging/preview URLs
+# Set CORS_ORIGINS="https://my-preview.vercel.app,https://staging.example.com"
+extra_origins = os.getenv("CORS_ORIGINS", "")
+for url in extra_origins.split(","):
+    url = url.strip().rstrip("/")
+    if url and url not in origins:
+        origins.append(url)
+
+# ── CORS MIDDLEWARE ───────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Allows any URL listed in the origins array above
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ✅ Include routers
+# ── ROUTERS ───────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["Tasks"])
 
-# ✅ Health check
+# ── UTILITY ENDPOINTS ─────────────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 def health_check():
     return {"status": "ok"}
 
-# ✅ Root endpoint
 @app.get("/")
 def root():
     return {"message": "API is running 🚀"}
