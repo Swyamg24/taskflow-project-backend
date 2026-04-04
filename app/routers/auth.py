@@ -11,7 +11,7 @@ from app.models import User
 # APIRouter = FastAPI's version of Express Router
 # prefix = all routes here start with /auth
 # tags = groups routes in Swagger UI
-router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
+router = APIRouter(tags=["Authentication"])
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
